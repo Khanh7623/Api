@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using APIdemo.Data;
 using APIdemo.Models;
+using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore;
 
 namespace APIdemo.Controllers
 {
@@ -14,52 +16,51 @@ namespace APIdemo.Controllers
         {
             _context = context;
         }
-        [HttpPost]
-        public JsonResult CreateEdit(Products products)
-        {
-            if(products.Id == 0)
-            {
-                _context.products.Add(products);
-            }
-            else
-            {
-                var ProductDb = _context.products.Find(products.Id);
-                if(ProductDb == null)
-                {
-                    return new JsonResult(NotFound());
-                }
-                ProductDb = products;
-            }
-            _context.SaveChanges();
-            return new JsonResult(Ok(products));
-        }
         [HttpGet]
-        public JsonResult Get(int id)
+        public async Task<ActionResult<List<Products>>> GetProduct()
         {
-            var result = _context.products.Find(id);
-            if(result == null)
+            return Ok(await _context.products.ToListAsync());
+        }
+        [HttpGet("id")]
+        public ActionResult<Products> GetId(int id)
+        {
+            var product = _context.products.Find(id);
+            if (product == null)
             {
-                return new JsonResult(NotFound());
+                return NotFound();
             }
-            return new JsonResult(Ok(result));
+            return product;
         }
-        [HttpDelete]
-        public JsonResult Delete(int id)
+        [HttpPost]
+        public async Task<ActionResult<Products>> Create(Products products)
         {
-            var result = _context.products.Find(id);
-            if(result == null)
+            _context.Add(products);
+            await _context.SaveChangesAsync();
+            return Ok(products);
+        }
+        [HttpPut("id")]
+        public async Task<ActionResult> Update(int id, Products products)
+        {
+            if (id != products.Id)
             {
-                return new JsonResult(NotFound());
+                return BadRequest();
             }
-            _context.products.Remove(result);
-            _context.SaveChanges();
-            return new JsonResult("Done");
+            _context.Entry(products).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return Ok(products);
         }
-        [HttpGet("/GetAll")]
-        public JsonResult GetProductAll()
+
+        [HttpDelete("id")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var result = _context.products.ToList();
-            return new JsonResult(Ok(result));
+            var product = await _context.products.FindAsync(id);
+            if(product == null)
+            {
+                return NotFound();
+            }
+            _context.products.Remove(product);
+            await _context.SaveChangesAsync();
+            return Ok(product);
         }
-    }
+    } 
 }
